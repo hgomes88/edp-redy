@@ -207,7 +207,7 @@ Pipy Releases: [https://pypi.org/project/edp-redy-api](https://pypi.org/project/
 [issues-url]: https://github.com/hgomes88/edp-redy/issues
 
 [license-shield]: https://img.shields.io/github/license/hgomes88/edp-redy.svg?style=for-the-badge
-[license-url]: https://github.com/hgomes88/edp-redy/blob/master/LICENSE.txt
+[license-url]: https://github.com/hgomes88/edp-redy/blob/main/LICENSE
 
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/hugohomes
