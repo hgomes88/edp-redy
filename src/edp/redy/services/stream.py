@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from asyncio import Task
 from dataclasses import dataclass
 from enum import Enum
@@ -11,7 +12,6 @@ from typing import Optional
 from typing import Tuple
 
 from awscrt import mqtt
-from edp.redy.logger.logger import logging
 from edp.redy.services.auth import AuthService
 from edp.redy.services.wsmqtt import WebSocketMqtt
 

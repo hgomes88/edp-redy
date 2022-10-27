@@ -1,8 +1,8 @@
+import logging
 from typing import Any
 
 import aiohttp
 from aiohttp import client_exceptions as exceptions
-from edp.redy.logger.logger import logging
 from edp.redy.services.auth import AuthService
 from mypy_boto3_cognito_identity.client import Exceptions
 

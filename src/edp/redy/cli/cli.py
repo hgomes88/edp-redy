@@ -1,8 +1,15 @@
 import asyncio
+import logging
 
 from edp.redy.app import App
 from edp.redy.cli.argparser import parser
-from edp.redy.logger.logger import logging
+
+logging.basicConfig(
+    level='INFO',
+    format='%(asctime)s %(levelname)s '
+    '%(name)s::%(funcName)s(line %(lineno)s): %(message)s'
+)
+
 
 log = logging.getLogger(__name__)
 
