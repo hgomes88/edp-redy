@@ -6,7 +6,7 @@ from typing import Any
 from typing import Optional
 
 import boto3
-from edp.redy.logger import logging
+from edp.redy.logger.logger import logging
 from mypy_boto3_cognito_identity.client import CognitoIdentityClient
 from warrant import Cognito
 

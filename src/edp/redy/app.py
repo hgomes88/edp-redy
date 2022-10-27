@@ -9,7 +9,7 @@ from typing import Optional
 import boto3
 from dataclasses_json import config
 from dataclasses_json import dataclass_json
-from edp.redy.logger import logging
+from edp.redy.logger.logger import logging
 from edp.redy.services.api import ApiService
 from edp.redy.services.auth import AuthService
 from edp.redy.services.auth import CognitoIdentity

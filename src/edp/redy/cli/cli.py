@@ -2,7 +2,7 @@ import asyncio
 
 from edp.redy.app import App
 from edp.redy.cli.argparser import parser
-from edp.redy.logger import logging
+from edp.redy.logger.logger import logging
 
 log = logging.getLogger(__name__)
 

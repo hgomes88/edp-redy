@@ -11,7 +11,7 @@ from typing import Optional
 from typing import Tuple
 
 from awscrt import mqtt
-from edp.redy.logger import logging
+from edp.redy.logger.logger import logging
 from edp.redy.services.auth import AuthService
 from edp.redy.services.wsmqtt import WebSocketMqtt
 

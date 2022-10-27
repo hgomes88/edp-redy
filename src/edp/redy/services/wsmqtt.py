@@ -4,7 +4,7 @@ from uuid import uuid4
 from awscrt import mqtt
 from awscrt.auth import AwsCredentialsProvider
 from awsiot import mqtt_connection_builder as mqtt_conn_builder
-from edp.redy.logger import logging
+from edp.redy.logger.logger import logging
 from edp.redy.services.auth import AuthService
 from edp.redy.services.auth import REGION
 
