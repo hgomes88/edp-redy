@@ -138,7 +138,7 @@ class CognitoUser:
         return self._cognito_user.refresh_token
 
     async def _check_token(self):
-        await self._run_in_executor(self._cognito_user.check_token, renew=True)
+        await self._run_in_executor(self._cognito_user.check_token)
 
     def _get_cognito_user(self) -> Cognito:
         return Cognito(
