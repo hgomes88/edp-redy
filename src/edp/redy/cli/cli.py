@@ -14,19 +14,19 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-def consumed(value):
+async def consumed(value):
     log.info(f'Consumed: {value} W')
 
 
-def produced(value):
+async def produced(value):
     log.info(f'Produced: {value} W')
 
 
-def injected(value):
+async def injected(value):
     log.info(f'Injected: {value} W')
 
 
-def self_consumed(value):
+async def self_consumed(value):
     log.info(f'Self Consumed: {value} W')
 
 

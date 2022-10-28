@@ -27,6 +27,7 @@ from edp.redy.services.stream import DeviceType
 from edp.redy.services.stream import StreamDevice
 from edp.redy.services.stream import StreamService
 from marshmallow import fields
+from typing_extensions import Protocol
 from warrant import Cognito
 
 log = logging.getLogger(__name__)
@@ -55,16 +56,16 @@ class App:
     async def start(self):
         self._auth = await self._login()
         self._api = self._get_api()
-        self._house_api = HousesService(api_service=self._api)
-        self._energy_api = EnergyService(api_service=self._api)
-        self._devices_api = DevicesService(api_service=self._api)
-        self._stream_api = StreamService(self._auth)
+        self.house_api = HousesService(api_service=self._api)
+        self.energy_api = EnergyService(api_service=self._api)
+        self.devices_api = DevicesService(api_service=self._api)
+        self.stream_api = StreamService(self._auth)
 
-        self._house: House = await self._get_house()
+        self.house: House = await self._get_house()
         self._modules: Dict[str, Module] = await self._get_modules()
         self._devices: Dict[str, Device] = await self._get_devices()
-        self._production_meter: Module = await self._get_production_meter()
-        self._injection_meter: Module = await self._get_injection_meter()
+        self.production_meter: Module = await self._get_production_meter()
+        self.injection_meter: Module = await self._get_injection_meter()
 
         self._energy: Energy = self._get_energy()
         self._power: Power = self._get_power()
@@ -81,42 +82,42 @@ class App:
     def _get_energy(self) -> 'Energy':
         return Energy(
             consumed=EnergyType(
-                devices_api=self._devices_api,
-                house_id=self._house.house_id,
-                device_id=self._injection_meter.device_id,
-                module_id=self._injection_meter.module_id,
+                devices_api=self.devices_api,
+                house_id=self.house.house_id,
+                device_id=self.injection_meter.device_id,
+                module_id=self.injection_meter.module_id,
                 historic_var=HistoricVar.ActiveEnergyConsumed
             ),
             produced=EnergyType(
-                devices_api=self._devices_api,
-                house_id=self._house.house_id,
-                device_id=self._production_meter.device_id,
-                module_id=self._production_meter.module_id,
+                devices_api=self.devices_api,
+                house_id=self.house.house_id,
+                device_id=self.production_meter.device_id,
+                module_id=self.production_meter.module_id,
                 historic_var=HistoricVar.ActiveEnergyProduced
             ),
             injected=EnergyType(
-                devices_api=self._devices_api,
-                house_id=self._house.house_id,
-                device_id=self._injection_meter.device_id,
-                module_id=self._injection_meter.module_id,
+                devices_api=self.devices_api,
+                house_id=self.house.house_id,
+                device_id=self.injection_meter.device_id,
+                module_id=self.injection_meter.module_id,
                 historic_var=HistoricVar.ActiveEnergyInjected
             ),
             self_consumed=EnergyType(
-                devices_api=self._devices_api,
-                house_id=self._house.house_id,
-                device_id=self._injection_meter.device_id,
-                module_id=self._injection_meter.module_id,
+                devices_api=self.devices_api,
+                house_id=self.house.house_id,
+                device_id=self.injection_meter.device_id,
+                module_id=self.injection_meter.module_id,
                 historic_var=HistoricVar.ActiveEnergySelfConsumed
             )
         )
 
     def _get_power(self) -> 'Power':
         return Power(
-            stream_api=self._stream_api,
-            injection_module=self._injection_meter,
-            injection_device=self._devices[self._injection_meter.device_id],
-            production_module=self._production_meter,
-            production_device=self._devices[self._production_meter.device_id]
+            stream_api=self.stream_api,
+            injection_module=self.injection_meter,
+            injection_device=self._devices[self.injection_meter.device_id],
+            production_module=self.production_meter,
+            production_device=self._devices[self.production_meter.device_id]
         )
 
     async def _login(self) -> AuthService:
@@ -159,18 +160,18 @@ class App:
         )
 
     async def _get_house(self) -> House:
-        houses = await self._house_api.get_houses()
+        houses = await self.house_api.get_houses()
         return houses[0]
 
     async def _get_modules(self) -> Dict[str, Module]:
-        modules = await self._devices_api.get_house_modules(
-            house_id=self._house.house_id
+        modules = await self.devices_api.get_house_modules(
+            house_id=self.house.house_id
         )
         return {module.module_id: module for module in modules}
 
     async def _get_devices(self) -> Dict[str, Device]:
-        devices = await self._devices_api.get_house_devices(
-            house_id=self._house.house_id
+        devices = await self.devices_api.get_house_devices(
+            house_id=self.house.house_id
         )
         return {device.device_id: device for device in devices}
 
@@ -325,20 +326,25 @@ class Energy:
     consumed: EnergyType
 
 
+class PowerTypeCallback(Protocol):
+    async def __call__(self, value: float) -> None:
+        ...
+
+
 class PowerType:
     def __init__(self) -> None:
         self.value = None
         self.date = None
-        self._cb = None
+        self._cb: Optional[PowerTypeCallback] = None
 
-    def stream(self, callback):
+    def stream(self, callback: PowerTypeCallback):
         self._cb = callback
 
-    def _callback(self, value):
+    async def _callback(self, value):
         self.value = value
         self.date = datetime.now()
         if self._cb:
-            self._cb(value)
+            await self._cb(value)
 
 
 class Power:
@@ -391,7 +397,11 @@ class Power:
             on_response_cb=self._on_response
         ).start()
 
-    def _on_notification(self, operation_type: str, data: Dict[str, Any]):
+    async def _on_notification(
+        self,
+        operation_type: str,
+        data: Dict[str, Any]
+    ):
         module_local_id: str = data['localId']
         state_variables: Dict[str, Any] = data['stateVariables']
 
@@ -399,7 +409,7 @@ class Power:
             supported_callbacks = self._callbacks[module_local_id]
             for name, value in state_variables.items():
                 if name in supported_callbacks:
-                    supported_callbacks[name](value)
+                    await supported_callbacks[name](value)
 
             # If there was any change, calculate and update the self consumed
             if (
@@ -407,8 +417,12 @@ class Power:
                 self.injected.value is not None
             ):
                 self_consumed = self.produced.value - self.injected.value
-                self.self_consumed._callback(self_consumed)
+                await self.self_consumed._callback(self_consumed)
 
-    def _on_response(self, operation_type: str,
-                     success: bool, data: Dict[str, Any]):
+    async def _on_response(
+        self,
+        operation_type: str,
+        success: bool,
+        data: Dict[str, Any]
+    ):
         pass

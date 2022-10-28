@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime
 from typing import List
 from typing import Optional
@@ -17,6 +18,12 @@ from edp.redy.services.devices.models.devicemodel import DeviceTypeMap
 from edp.redy.services.devices.models.modulesmodel import HistoricVar
 from edp.redy.services.devices.models.modulesmodel import Module
 from edp.redy.services.devices.models.modulesmodel import Resolution
+
+log = logging.getLogger(__name__)
+
+DATETIME_HOUR_FORMAT = '%Y-%m-%d %H:%M:%S'
+DATETIME_DAY_FORMAT = '%Y-%m-%d'
+DATETIME_MONTH_FORMAT = '%Y-%m'
 
 
 class DevicesService:
@@ -150,13 +157,13 @@ class DevicesService:
     def calculate_end(start: datetime, resolution: Resolution) -> datetime:
         delta = None
         if resolution == Resolution.QuarterHour:
-            delta = relativedelta(hours=1, minutes=-1)
+            delta = relativedelta()
         elif resolution == Resolution.Hour:
-            delta = relativedelta(days=1, hours=-1)
+            delta = relativedelta()
         elif resolution == Resolution.Day:
             delta = relativedelta(months=1, days=-1)
         elif resolution == Resolution.Month:
-            delta = relativedelta(years=1, months=-1)
+            delta = relativedelta(years=1, days=-1)
         else:
             raise ValueError(f'The resolution {resolution} is not supported')
 
@@ -164,22 +171,10 @@ class DevicesService:
 
     @staticmethod
     def calculate_start(resolution: Resolution) -> datetime:
-        now = datetime.now()
+        return datetime.now()
 
-        if resolution in (Resolution.QuarterHour, Resolution.Hour):
-            now = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif resolution == Resolution.Day:
-            now = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        elif resolution == Resolution.Month:
-            now = now.replace(
-                month=1,
-                day=1,
-                hour=0,
-                minute=0,
-                second=0,
-                microsecond=0)
-
-        return now
+    def date_to_string(self, date: datetime) -> str:
+        return date.strftime(DATETIME_DAY_FORMAT)
 
     async def get_metering(
         self,
@@ -197,12 +192,12 @@ class DevicesService:
             end = self.calculate_end(start, resolution)
 
         params = {
-            'start': str(start),
-            'end': str(end),
+            'start': self.date_to_string(start),
+            'end': self.date_to_string(end),
             'resolution': resolution.value,
             'historicvar': historicVar.value
         }
-        # print(params)
+        # log.info(f"get_metering params: {params}")
         metering = await self._api_service.get(
             METERING_URL.format(
                 house_id=house_id,

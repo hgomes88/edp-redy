@@ -14,6 +14,7 @@ from typing import Tuple
 from awscrt import mqtt
 from edp.redy.services.auth import AuthService
 from edp.redy.services.wsmqtt import WebSocketMqtt
+from typing_extensions import Protocol
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +35,19 @@ DEVICE_ITEMS = {
     DeviceType.WIFI: 'wifi'
 }
 
+StreamCallbackType = Callable[[str, ], None]
+
+
+class StreamCallback(Protocol):
+    def __call__(
+            self,
+            topic: str,
+            payload: str,
+            dup: bool,
+            qos: mqtt.QoS,
+            retain: bool):
+        ...
+
 
 class Stream:
 
@@ -43,7 +57,7 @@ class Stream:
         self._con: mqtt.Connection
         self._devices: List[StreamDevice] = []
         self._tasks: Dict[str, Task] = {}
-        self._callback = self._on_message_received
+        self._callback: StreamCallback = self._on_message_received
 
     def add_devices(self, devices: List[StreamDevice]):
         """ Add a list of devices streaming the data from """
@@ -52,7 +66,7 @@ class Stream:
             device for device in devices if device.type in DEVICE_ITEMS]
         return self
 
-    def add_callback(self, callback):
+    def add_callback(self, callback: StreamCallback):
         self._callback = callback
         return self
 
@@ -111,7 +125,7 @@ class Stream:
     def _device_req_topic(self, device_id: str):
         return f'wifi/{device_id}/toDev/realtime'
 
-    def _on_message_received(self, topic, payload, dup, qos, retain, **kwargs):
+    def _on_message_received(self, topic, payload, dup, qos, retain):
         log.debug(f"Received message from topic '{topic}': {payload}")
 
     async def _subscribe(self, topic: str):
@@ -120,7 +134,7 @@ class Stream:
             self._con.subscribe(
                 topic=topic,
                 qos=self._qos,
-                callback=self._callback
+                callback=self._callback  # type: ignore
             )[0]
         )
         log.debug('Subscribing to topic done')
@@ -167,15 +181,23 @@ class Stream:
                 log.exception('Unexpected error')
 
 
-class StreamCallbacks:
+class OnNotificationStreamCallback(Protocol):
+    async def __call__(
+        self,
+        operation_type: str,
+        data: Dict[str, Any]
+    ) -> None:
+        ...
 
-    @staticmethod
-    def on_notification(operation_type: str, data: Dict[str, Any]):
-        log.info(f"Notification '{operation_type}': {data}")
 
-    @staticmethod
-    def on_response(operation_type: str, success: bool, data: Dict[str, Any]):
-        log.info(f"Response '{operation_type}'({success}): {data}")
+class OnResponseStreamCallback(Protocol):
+    async def __call__(
+        self,
+        operation_type: str,
+        success: bool,
+        data: Dict[str, Any]
+    ) -> None:
+        ...
 
 
 class StreamService:
@@ -184,23 +206,19 @@ class StreamService:
         self._auth = auth
         self._stream = Stream(auth=self._auth)
         self._devices: List[StreamDevice] = []
-        self._callback: Optional[StreamCallbacks] = None
-        self._on_response_cb: Optional[Callable] = None
-        self._on_notification_cb: Optional[Callable] = None
+        self._on_response_cb: Optional[OnResponseStreamCallback] = None
+        self._on_notification_cb: Optional[OnNotificationStreamCallback] = None
 
     def add_devices(self, devices: List[StreamDevice]) -> 'StreamService':
         self._devices = devices
         return self
 
-    def add_callback_class(self, callback: StreamCallbacks) -> 'StreamService':
-        self._callback = callback
-        return self
-
     def add_callback(
-            self,
-            *,
-            on_response_cb=None,
-            on_notification_cb=None) -> 'StreamService':
+        self,
+        *,
+        on_response_cb: Optional[OnResponseStreamCallback] = None,
+        on_notification_cb: Optional[OnNotificationStreamCallback] = None
+    ) -> 'StreamService':
         self._on_response_cb = on_response_cb
         self._on_notification_cb = on_notification_cb
         return self
@@ -230,27 +248,27 @@ class StreamService:
         log.info('Real Time Streaming configured')
 
     def _on_message_received(
-            self,
-            topic,
-            payload: bytes,
-            dup,
-            qos,
-            retain,
-            **kwargs):
+        self,
+        topic,
+        payload: bytes,
+        dup,
+        qos,
+        retain
+    ):
         payload_data: Dict[str, Any] = json.loads(payload.decode())
         message_type = payload_data.get('messageType')
 
         if message_type == 'notification':
             operation_type = payload_data['operationType']
             data_list = payload_data['data']
-            if self._callback:
+            if self._on_notification_cb:
                 for data in data_list:
-                    self._callback.on_notification(
-                        operation_type=operation_type, data=data)
-            elif self._on_notification_cb:
-                for data in data_list:
-                    self._on_notification_cb(
-                        operation_type=operation_type, data=data)
+                    asyncio.run(
+                        self._on_notification_cb(
+                            operation_type=operation_type,
+                            data=data
+                        )
+                    )
             else:
                 log.info(
                     f"Notification from topic {topic} '{operation_type}': "
@@ -260,14 +278,14 @@ class StreamService:
             operation_type = payload_data['operationType']
             success = payload_data['success']
             data = payload_data['data']
-            if self._callback:
-                self._callback.on_response(
-                    operation_type=operation_type, success=success, data=data)
-            elif self._on_response_cb:
-                self._on_response_cb(
-                    operation_type=operation_type,
-                    success=success,
-                    data=data)
+            if self._on_response_cb:
+                asyncio.run(
+                    self._on_response_cb(
+                        operation_type=operation_type,
+                        success=success,
+                        data=data
+                    )
+                )
             else:
                 log.info(
                     f"Response from topic {topic} '{operation_type}'"
