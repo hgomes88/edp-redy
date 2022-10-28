@@ -21,9 +21,7 @@ from edp.redy.services.devices.models.modulesmodel import Resolution
 
 log = logging.getLogger(__name__)
 
-DATETIME_HOUR_FORMAT = '%Y-%m-%d %H:%M:%S'
 DATETIME_DAY_FORMAT = '%Y-%m-%d'
-DATETIME_MONTH_FORMAT = '%Y-%m'
 
 
 class DevicesService:
@@ -171,7 +169,22 @@ class DevicesService:
 
     @staticmethod
     def calculate_start(resolution: Resolution) -> datetime:
-        return datetime.now()
+        now = datetime.now()
+
+        if resolution in (Resolution.QuarterHour, Resolution.Hour):
+            now = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif resolution == Resolution.Day:
+            now = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        elif resolution == Resolution.Month:
+            now = now.replace(
+                month=1,
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0)
+
+        return now
 
     def date_to_string(self, date: datetime) -> str:
         return date.strftime(DATETIME_DAY_FORMAT)
