@@ -140,13 +140,9 @@ To contribute to this project, you need to execute the following steps:
 
     3. Run formatters/linters:
 
-        1. Autopep8:
+        1. Ruff
 
-            `autopep8 src/ tests/`
-
-        1. Flake8:
-
-            `flake8 src/ tests/`
+            `ruff .`
 
         1. Mypy:
 
