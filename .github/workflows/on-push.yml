@@ -15,15 +15,14 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: '3.x'
+        python-version: '3.8'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install ".[dev]"
     - name: Lint Check
       run: |
-        flake8 src/ tests/
-        mypy src/ tests/
+        ruff .
     - name: Test
       run: |
         pytest

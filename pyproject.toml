@@ -1,3 +1,116 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=42", "wheel", "setuptools-git-versioning"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools-git-versioning]
+enabled = true
+
+[project]
+name = "edp-redy-api"
+description = "EDP Redy API"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    { name="Hugo Gomes", email="hgomes88@gmail.com" },
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "urllib3<1.27,>=1.25.4",
+    "aiohttp==3.8.6",
+    "awscrt==0.19.1",
+    "awsiotsdk==1.19.0",
+    "boto3==1.28.83",
+    "boto3-stubs[cognito-identity]==1.28.83",
+    "dataclasses-json==0.6.2",
+    "warrant==0.4.0",
+    "aiocron==1.8"
+]
+
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    "build==1.0.3",
+    "pytest==7.4.3",
+    "pytest-asyncio==0.21.1",
+    "pre-commit==3.5.0",
+    "types-python-dateutil==2.8.19.14",
+    "ruff~=0.1.5"
+]
+
+[project.scripts]
+    redy = "edp.redy.cli.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/hgomes88/edp-redy"
+Repository = "https://github.com/hgomes88/edp-redy.git"
+Tracker = "https://github.com/hgomes88/edp-redy/issues"
+Download = "https://pypi.org/project/edp-redy/"
+
+[tool.pytest]
+testpaths = [
+    "tests/unit",
+    "tests/integration"
+]
+filterwarnings = [
+    "ignore::DeprecationWarning"
+]
+
+[mypy]
+namespace_packages = true
+ignore_missing_imports = true
+pretty = true
+show_error_codes = true
+show_error_context = true
+show_traceback = true
+
+
+[tool.ruff]
+target-version = "py38"
+select = [
+    "B007", # Loop control variable {name} not used within loop body
+    "B014", # Exception handler with duplicate exception
+    "C",  # complexity
+    "D",  # docstrings
+    "E",  # pycodestyle
+    "F",  # pyflakes/autoflake
+    "ICN001", # import concentions; {name} should be imported as {asname}
+    "PGH004",  # Use specific rule codes when using noqa
+    "PLC0414", # Useless import alias. Import alias does not rename original package.
+    "SIM105", # Use contextlib.suppress({exception}) instead of try-except-pass
+    "SIM117", # Merge with-statements that use the same scope
+    "SIM118", # Use {key} in {dict} instead of {key} in {dict}.keys()
+    "SIM201", # Use {left} != {right} instead of not {left} == {right}
+    "SIM212", # Use {a} if {a} else {b} instead of {b} if not {a} else {a}
+    "SIM300", # Yoda conditions. Use 'age == 42' instead of '42 == age'.
+    "SIM401", # Use get from dict with default instead of an if block
+    "T20",  # flake8-print
+    "TRY004", # Prefer TypeError exception for invalid type
+    "RUF006", # Store a reference to the return value of asyncio.create_task
+    "UP",  # pyupgrade
+    "W",  # pycodestyle
+]
+
+ignore = [
+    "D202",  # No blank lines allowed after function docstring
+    "D203",  # 1 blank line required before class docstring
+    "D213",  # Multi-line docstring summary should start at the second line
+    "D404",  # First word of the docstring should not be This
+    "D406",  # Section name should end with a newline
+    "D407",  # Section name underlining
+    "D411",  # Missing blank line before section
+    "E501",  # line too long
+    "E731",  # do not assign a lambda expression, use a def
+]
+
+[flake8-pytest-style]
+fixture-parentheses = false
+
+[mccabe]
+max-complexity = 25

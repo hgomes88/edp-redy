@@ -1,3 +1,4 @@
+"""Modules model module."""
 from dataclasses import dataclass
 from dataclasses import field
 from enum import Enum
@@ -12,58 +13,67 @@ from dataclasses_json import Undefined
 
 
 def case_field(case: LetterCase, *args, **kwargs):
-    return field(
-        *args,
-        metadata={'dataclasses_json': {'letter_case': case}},
-        **kwargs
-    )
+    """Case field."""
+    return field(*args, metadata={"dataclasses_json": {"letter_case": case}}, **kwargs)
 
 
 def pascal_field(*args, **kwargs):
+    """Pascal field."""
     return case_field(LetterCase.PASCAL, *args, **kwargs)
 
 
 def camel_field(*args, **kwargs):
+    """Camel field."""
     return case_field(LetterCase.CAMEL, *args, **kwargs)
 
 
 class ModuleGroup(str, Enum):
-    SmartEnergyMeter = 'SMART_ENERGY_METER'
-    ConsumptionMeter = 'CONSUMPTION_METER'
-    ProductionMeter = 'PRODUCTION_METER'
-    InjectionMeter = 'INJECTION_METER'
-    Metering = 'METERING'
-    VoltageMeter = 'VOLTAGE_METER'
+    """Module groups."""
+
+    SmartEnergyMeter = "SMART_ENERGY_METER"
+    ConsumptionMeter = "CONSUMPTION_METER"
+    ProductionMeter = "PRODUCTION_METER"
+    InjectionMeter = "INJECTION_METER"
+    Metering = "METERING"
+    VoltageMeter = "VOLTAGE_METER"
 
 
 class Resolution(str, Enum):
-    QuarterHour = 'Q'
-    Hour = 'H'
-    Day = 'D'
-    Month = 'M'
+    """Resolutions."""
+
+    QuarterHour = "Q"
+    Hour = "H"
+    Day = "D"
+    Month = "M"
 
 
 class HistoricVar(str, Enum):
-    ActiveEnergyInjected = 'ActiveEnergyInjected'
-    ActiveEnergyConsumed = 'ActiveEnergyConsumed'
-    ActivePeakPowerConsumed = 'ActivePeakPowerConsumed'
-    AverageVoltage = 'AverageVoltage'
-    ActiveEnergySelfConsumed = 'ActiveEnergySelfconsumed'
-    ActiveEnergyInjectedRaw = 'ActiveEnergyInjectedRaw'
-    ActiveEnergyProduced = 'ActiveEnergyProduced'
+    """Historical variables."""
+
+    ActiveEnergyInjected = "ActiveEnergyInjected"
+    ActiveEnergyConsumed = "ActiveEnergyConsumed"
+    ActivePeakPowerConsumed = "ActivePeakPowerConsumed"
+    AverageVoltage = "AverageVoltage"
+    ActiveEnergySelfConsumed = "ActiveEnergySelfconsumed"
+    ActiveEnergyInjectedRaw = "ActiveEnergyInjectedRaw"
+    ActiveEnergyProduced = "ActiveEnergyProduced"
 
 
 class StateVar(str, Enum):
-    ActivePowerAPlus = 'activePowerAplus'
-    TotalActiveEnergyAPlus = 'totalActiveEnergyAplus'
-    ActivePowerAMinus = 'activePowerAminus'
-    TotalActiveEnergyAMinus = 'totalActiveEnergyAminus'
-    Voltage = 'voltage'
+    """State variables."""
+
+    ActivePowerAPlus = "activePowerAplus"
+    TotalActiveEnergyAPlus = "totalActiveEnergyAplus"
+    ActivePowerAMinus = "activePowerAminus"
+    TotalActiveEnergyAMinus = "totalActiveEnergyAminus"
+    Voltage = "voltage"
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class VoltageHistory:
+    """Voltage history dataclass."""
+
     period: int
     unit: str
 
@@ -71,6 +81,8 @@ class VoltageHistory:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class EnergyHistory:
+    """Energy history dataclass."""
+
     period: float
     unit: str
 
@@ -78,6 +90,8 @@ class EnergyHistory:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class ActiveEnergy:
+    """Active energy dataclass."""
+
     value: float
     unit: str
 
@@ -85,6 +99,8 @@ class ActiveEnergy:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Power:
+    """Power dataclass."""
+
     unit: str
     value: Optional[float] = None
 
@@ -92,6 +108,8 @@ class Power:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Voltage:
+    """Voltage dataclass."""
+
     value: float
     unit: str
 
@@ -99,6 +117,8 @@ class Voltage:
 @dataclass_json(letter_case=LetterCase.PASCAL, undefined=Undefined.EXCLUDE)
 @dataclass
 class HistoricVars:
+    """Historic variables dataclass."""
+
     supported: List[str] = camel_field()
     average_voltage: Optional[VoltageHistory] = None
     active_energy_produced: Optional[EnergyHistory] = None
@@ -112,6 +132,8 @@ class HistoricVars:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class StateVars:
+    """State variables dataclass."""
+
     supported: List[str]
     voltage: Voltage
     active_power_aminus: Optional[Power] = None
@@ -123,6 +145,8 @@ class StateVars:
 @dataclass_json(letter_case=LetterCase.CAMEL, undefined=Undefined.EXCLUDE)
 @dataclass
 class Module:
+    """Module dataclass."""
+
     historic_vars: HistoricVars
     model: str
     user_attributes: Dict[str, Any]
