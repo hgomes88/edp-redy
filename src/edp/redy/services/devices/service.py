@@ -1,3 +1,4 @@
+"""Devices service module."""
 import json
 import logging
 from datetime import datetime
@@ -21,17 +22,20 @@ from edp.redy.services.devices.models.modulesmodel import Resolution
 
 log = logging.getLogger(__name__)
 
-DATETIME_DAY_FORMAT = '%Y-%m-%d'
+DATETIME_DAY_FORMAT = "%Y-%m-%d"
 
 
 class DevicesService:
+    """Devices service class."""
 
     def __init__(self, api_service: ApiService) -> None:
+        """Init the devices service object."""
         self._api_service = api_service
 
     async def get_house_devices(self, house_id) -> List[Device]:
-        devices_list = (
-            await self._api_service.get(DEVICES_URL.format(house_id=house_id))
+        """Get house devices."""
+        devices_list = await self._api_service.get(
+            DEVICES_URL.format(house_id=house_id)
         )
         return [Device.from_dict(device) for device in devices_list]
 
@@ -41,118 +45,100 @@ class DevicesService:
         device_type: Optional[DeviceType] = None,
         category_id: Optional[str] = None,
         groups_or_filter: Optional[List[DeviceGroup]] = None,
-        groups_not_filter: Optional[List[DeviceGroup]] = None
+        groups_not_filter: Optional[List[DeviceGroup]] = None,
     ) -> List[Module]:
-
+        """Get  list of house modules."""
         params = {}
 
-        if device_type and (
-                device_type != DeviceType.Consumption or not category_id):
+        if device_type and (device_type != DeviceType.Consumption or not category_id):
             device_type_def = DeviceTypeMap.map[device_type]
-            params['groupsorfilter'] = json.dumps(
-                groups_or_filter
-                if groups_or_filter
-                else device_type_def.groups
+            params["groupsorfilter"] = json.dumps(
+                groups_or_filter if groups_or_filter else device_type_def.groups
             )
-            params['groupsnotfilter'] = json.dumps(
-                groups_not_filter
-                if groups_not_filter
-                else device_type_def.nonGroups)
+            params["groupsnotfilter"] = json.dumps(
+                groups_not_filter if groups_not_filter else device_type_def.nonGroups
+            )
 
-        if (
-            device_type and
-            device_type == DeviceType.Consumption and category_id
-        ):
-            params['categoryfilter'] = category_id
+        if device_type and device_type == DeviceType.Consumption and category_id:
+            params["categoryfilter"] = category_id
 
         if not device_type and not category_id and groups_or_filter:
             if groups_or_filter:
-                params['groupsorfilter'] = json.dumps(groups_or_filter)
+                params["groupsorfilter"] = json.dumps(groups_or_filter)
             if groups_not_filter:
-                params['groupsnotfilter'] = json.dumps(groups_not_filter)
+                params["groupsnotfilter"] = json.dumps(groups_not_filter)
 
         modules_list = (
             await self._api_service.get(
-                MODULES_URL.format(house_id=house_id),
-                params=params
+                MODULES_URL.format(house_id=house_id), params=params
             )
-        )['Modules']
+        )["Modules"]
 
         return Module.schema().load(modules_list, many=True)
 
     async def get_house_module_by_group(
-        self,
-        house_id,
-        groups_or_filter: Optional[DeviceGroup] = None,
-        *args,
-        **kwargs
+        self, house_id, groups_or_filter: Optional[DeviceGroup] = None, *args, **kwargs
     ) -> Module:
+        """Get a list of house modules by group."""
         modules = await self.get_house_modules(
-            house_id,
-            [groups_or_filter],
-            *args,
-            **kwargs
+            house_id, [groups_or_filter], *args, **kwargs
         )
         return modules[0]
 
     async def get_house_module(self, house_id: str, module_id: str) -> Module:
+        """Get an house module."""
         module = await self._api_service.get(
             MODULE_URL.format(house_id=house_id, module_id=module_id)
         )
         return Module.from_dict(module)
 
     async def get_smart_meter(self, house_id: str) -> Module:
+        """Get the smart meter module."""
         return await self.get_house_module_by_group(
-            house_id=house_id,
-            groups_or_filter=DeviceGroup.SmartEnergyMeter
+            house_id=house_id, groups_or_filter=DeviceGroup.SmartEnergyMeter
         )
 
     async def get_energy_storage(self, house_id: str) -> Module:
+        """Get the energy storage module."""
         return await self.get_house_module_by_group(
-            house_id=house_id,
-            groups_or_filter=DeviceGroup.EnergyStorage
+            house_id=house_id, groups_or_filter=DeviceGroup.EnergyStorage
         )
 
     async def get_gas_meter(self, house_id: str) -> Module:
+        """Get the gas meter module."""
         return await self.get_house_module_by_group(
-            house_id=house_id,
-            groups_or_filter=DeviceGroup.GasMeter
+            house_id=house_id, groups_or_filter=DeviceGroup.GasMeter
         )
 
     async def get_injection_meter(self, house_id: str) -> Module:
+        """Get the injection meter module."""
         return await self.get_house_module_by_group(
-            house_id=house_id,
-            groups_or_filter=DeviceGroup.InjectionMeter
+            house_id=house_id, groups_or_filter=DeviceGroup.InjectionMeter
         )
 
     async def get_alerts_devices(self, house_id: str) -> Module:
+        """Get devices alerts."""
         return await self.get_house_modules(
             house_id=house_id,
-            groups_or_filter=[
-                DeviceGroup.Metering,
-                DeviceGroup.ConsumptionMeter
-            ],
+            groups_or_filter=[DeviceGroup.Metering, DeviceGroup.ConsumptionMeter],
             groups_not_filter=[
                 DeviceGroup.ProductionMeter,
-                DeviceGroup.SmartEnergyMeter
-            ]
+                DeviceGroup.SmartEnergyMeter,
+            ],
         )
 
-    async def get_cost_per_kwh(
-        self,
-        house_id: str,
-        resolution: str,
-        date: str
-    ):
+    async def get_cost_per_kwh(self, house_id: str, resolution: str, date: str):
+        """Get the cost per kwh."""
         cost = await self._api_service.get(
             COST_PER_KWH_URL.format(house_id=house_id),
-            params={'date': date, 'resolution': resolution}
+            params={"date": date, "resolution": resolution},
         )
 
         return cost
 
     @staticmethod
     def calculate_end(start: datetime, resolution: Resolution) -> datetime:
+        """Calculate the end datetime."""
         delta = None
         if resolution == Resolution.QuarterHour:
             delta = relativedelta()
@@ -163,12 +149,13 @@ class DevicesService:
         elif resolution == Resolution.Month:
             delta = relativedelta(years=1, days=-1)
         else:
-            raise ValueError(f'The resolution {resolution} is not supported')
+            raise ValueError(f"The resolution {resolution} is not supported")
 
         return start + delta
 
     @staticmethod
     def calculate_start(resolution: Resolution) -> datetime:
+        """Calculate start."""
         now = datetime.now()
 
         if resolution in (Resolution.QuarterHour, Resolution.Hour):
@@ -176,17 +163,12 @@ class DevicesService:
         elif resolution == Resolution.Day:
             now = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         elif resolution == Resolution.Month:
-            now = now.replace(
-                month=1,
-                day=1,
-                hour=0,
-                minute=0,
-                second=0,
-                microsecond=0)
+            now = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
 
         return now
 
     def date_to_string(self, date: datetime) -> str:
+        """Convert date to string."""
         return date.strftime(DATETIME_DAY_FORMAT)
 
     async def get_metering(
@@ -197,27 +179,26 @@ class DevicesService:
         resolution: Resolution,
         historicVar: HistoricVar,
         start: Optional[datetime] = None,
-        end: Optional[datetime] = None
+        end: Optional[datetime] = None,
     ):
+        """Get metering."""
         if not start:
             start = self.calculate_start(resolution)
         if not end:
             end = self.calculate_end(start, resolution)
 
         params = {
-            'start': self.date_to_string(start),
-            'end': self.date_to_string(end),
-            'resolution': resolution.value,
-            'historicvar': historicVar.value
+            "start": self.date_to_string(start),
+            "end": self.date_to_string(end),
+            "resolution": resolution.value,
+            "historicvar": historicVar.value,
         }
         # log.info(f"get_metering params: {params}")
         metering = await self._api_service.get(
             METERING_URL.format(
-                house_id=house_id,
-                device_id=device_id,
-                module_id=module_id
+                house_id=house_id, device_id=device_id, module_id=module_id
             ),
-            params=params
+            params=params,
         )
 
         return metering

@@ -1,3 +1,4 @@
+"""Stream module."""
 import asyncio
 import json
 import logging
@@ -20,38 +21,57 @@ log = logging.getLogger(__name__)
 
 
 class DeviceType(str, Enum):
-    REDYBOX = 'redybox'
-    WIFI = 'wifi'
+    """Device Types."""
+
+    REDYBOX = "redybox"
+    WIFI = "wifi"
 
 
 @dataclass
 class StreamDevice:
+    """Stream Device class."""
+
     localId: str
     type: DeviceType
 
 
-DEVICE_ITEMS = {
-    DeviceType.REDYBOX: 'rb',
-    DeviceType.WIFI: 'wifi'
-}
+DEVICE_ITEMS = {DeviceType.REDYBOX: "rb", DeviceType.WIFI: "wifi"}
 
-StreamCallbackType = Callable[[str, ], None]
+StreamCallbackType = Callable[
+    [
+        str,
+    ],
+    None,
+]
 
 
 class StreamCallback(Protocol):
+    """The stream callback protocol."""
+
     def __call__(
-            self,
-            topic: str,
-            payload: str,
-            dup: bool,
-            qos: mqtt.QoS,
-            retain: bool):
+        self, topic: str, payload: str, dup: bool, qos: mqtt.QoS, retain: bool
+    ):
+        """Call.
+
+        Args:
+            topic (str): _description_
+            payload (str): _description_
+            dup (bool): _description_
+            qos (mqtt.QoS): _description_
+            retain (bool): _description_
+        """
         ...
 
 
 class Stream:
+    """The stream class."""
 
     def __init__(self, auth: AuthService) -> None:
+        """Create a new stream object.
+
+        Args:
+            auth (AuthService): The auth service
+        """
         self._qos = mqtt.QoS.AT_LEAST_ONCE
         self._auth = auth
         self._con: mqtt.Connection
@@ -60,26 +80,33 @@ class Stream:
         self._callback: StreamCallback = self._on_message_received
 
     def add_devices(self, devices: List[StreamDevice]):
-        """ Add a list of devices streaming the data from """
+        """Add a list of devices streaming the data from."""
 
-        self._devices = [
-            device for device in devices if device.type in DEVICE_ITEMS]
+        self._devices = [device for device in devices if device.type in DEVICE_ITEMS]
         return self
 
     def add_callback(self, callback: StreamCallback):
+        """Add a callback to stream.
+
+        Args:
+            callback (StreamCallback): The stream callback
+
+        Returns:
+            _type_: The Stream
+        """
         self._callback = callback
         return self
 
     async def start(self):
-        """ Start streaming """
+        """Start streaming."""
 
         self._con = await self._create_connection()
 
-        log.debug('Mqtt socket connection establishing...')
+        log.debug("Mqtt socket connection establishing...")
         # self._con.connect().result()
         await asyncio.wrap_future(self._con.connect())
 
-        log.debug('Mqtt socket connection established')
+        log.debug("Mqtt socket connection established")
 
         for device in self._devices:
             for topic in self._device_topics(device.localId):
@@ -90,7 +117,7 @@ class Stream:
             )
 
     async def stop(self):
-        """ Stop streaming """
+        """Stop streaming."""
 
         self._con.unsubscribe()
         await asyncio.wrap_future(self._con.disconnect())
@@ -101,29 +128,29 @@ class Stream:
         await asyncio.wrap_future(self._con.disconnect())
 
     async def _create_connection(self) -> mqtt.Connection:
-        log.debug('Configuring the mqtt socket connection...')
+        log.debug("Configuring the mqtt socket connection...")
         con = await WebSocketMqtt(auth=self._auth).new_connection()
-        log.debug('Mqtt socket connection done')
+        log.debug("Mqtt socket connection done")
         return con
 
     def _module_update_topic(self, device_id: str) -> str:
-        return f'wifi/{device_id}/fromDev/module/update'
+        return f"wifi/{device_id}/fromDev/module/update"
 
     def _module_changed_topic(self, device_id: str) -> str:
-        return f'wifi/{device_id}/fromDev/module/changed'
+        return f"wifi/{device_id}/fromDev/module/changed"
 
     def _realtime_topic(self, device_id: str) -> str:
-        return f'wifi/{device_id}/fromDev/realtime'
+        return f"wifi/{device_id}/fromDev/realtime"
 
     def _device_topics(self, device_id: str) -> Tuple[str, str, str]:
         return (
             self._module_update_topic(device_id),
             self._module_changed_topic(device_id),
-            self._realtime_topic(device_id)
+            self._realtime_topic(device_id),
         )
 
     def _device_req_topic(self, device_id: str):
-        return f'wifi/{device_id}/toDev/realtime'
+        return f"wifi/{device_id}/toDev/realtime"
 
     def _on_message_received(self, topic, payload, dup, qos, retain):
         log.debug(f"Received message from topic '{topic}': {payload}")
@@ -134,82 +161,95 @@ class Stream:
             self._con.subscribe(
                 topic=topic,
                 qos=self._qos,
-                callback=self._callback  # type: ignore
+                callback=self._callback,  # type: ignore
             )[0]
         )
-        log.debug('Subscribing to topic done')
+        log.debug("Subscribing to topic done")
 
     async def _publish(self, topic: str, payload: dict):
-
         log.debug(f"Publishing the request to topic '{topic}': {payload}...")
         await asyncio.wrap_future(
-            self._con.publish(
-                topic=topic,
-                payload=json.dumps(payload),
-                qos=self._qos
-            )[0]
+            self._con.publish(topic=topic, payload=json.dumps(payload), qos=self._qos)[
+                0
+            ]
         )
-        log.debug('Publishing the realtime request done')
+        log.debug("Publishing the realtime request done")
 
-    async def _keep_connection_alive(
-        self,
-        device_id: str,
-        period_s: float = 55
-    ):
+    async def _keep_connection_alive(self, device_id: str, period_s: float = 55):
         while True:
-
             try:
-
-                log.debug(f'Keeping connection alive for {device_id}')
+                log.debug(f"Keeping connection alive for {device_id}")
 
                 await self._publish(
                     topic=self._device_req_topic(device_id),
                     payload={
-                        'id': self._con.client_id,
-                        'operationType': 'realtime',
-                        'messageType': 'request',
-                        'data': {
-                            'timeout': 60
-                        }
-                    }
+                        "id": self._con.client_id,
+                        "operationType": "realtime",
+                        "messageType": "request",
+                        "data": {"timeout": 60},
+                    },
                 )
                 await asyncio.sleep(period_s)
 
             except asyncio.exceptions.CancelledError:
                 pass
             except BaseException:
-                log.exception('Unexpected error')
+                log.exception("Unexpected error")
 
 
 class OnNotificationStreamCallback(Protocol):
-    async def __call__(
-        self,
-        operation_type: str,
-        data: Dict[str, Any]
-    ) -> None:
+    """Protocol for the On Notification Stream callback."""
+
+    async def __call__(self, operation_type: str, data: Dict[str, Any]) -> None:
+        """Protocol for the callback on notification stream.
+
+        Args:
+            operation_type (str): The type of operation
+            data (Dict[str, Any]): The data
+        """
         ...
 
 
 class OnResponseStreamCallback(Protocol):
+    """Protocol for the On Response Stream callback."""
+
     async def __call__(
-        self,
-        operation_type: str,
-        success: bool,
-        data: Dict[str, Any]
+        self, operation_type: str, success: bool, data: Dict[str, Any]
     ) -> None:
+        """Protocol for the callback on response stream.
+
+        Args:
+            operation_type (str): Type of operation
+            success (bool): Whether is success
+            data (Dict[str, Any]): Data
+        """
         ...
 
 
 class StreamService:
+    """Stream service class."""
 
     def __init__(self, auth: AuthService) -> None:
+        """Initialize a streams service object.
+
+        Args:
+            auth (AuthService): The auth service
+        """
         self._auth = auth
         self._stream = Stream(auth=self._auth)
         self._devices: List[StreamDevice] = []
         self._on_response_cb: Optional[OnResponseStreamCallback] = None
         self._on_notification_cb: Optional[OnNotificationStreamCallback] = None
 
-    def add_devices(self, devices: List[StreamDevice]) -> 'StreamService':
+    def add_devices(self, devices: List[StreamDevice]) -> "StreamService":
+        """Add devices to stream service.
+
+        Args:
+            devices (List[StreamDevice]): List of devices to add
+
+        Returns:
+            StreamService: The stream service object
+        """
         self._devices = devices
         return self
 
@@ -217,24 +257,35 @@ class StreamService:
         self,
         *,
         on_response_cb: Optional[OnResponseStreamCallback] = None,
-        on_notification_cb: Optional[OnNotificationStreamCallback] = None
-    ) -> 'StreamService':
+        on_notification_cb: Optional[OnNotificationStreamCallback] = None,
+    ) -> "StreamService":
+        """Add callback functions.
+
+        Args:
+            on_response_cb (Optional[OnResponseStreamCallback], optional): Function being called on response. Defaults to None.
+            on_notification_cb (Optional[OnNotificationStreamCallback], optional): Function called on notifications. Defaults to None.
+
+        Returns:
+            StreamService: _description_
+        """
         self._on_response_cb = on_response_cb
         self._on_notification_cb = on_notification_cb
         return self
 
-    async def start(self) -> 'StreamService':
+    async def start(self) -> "StreamService":
+        """Start a stream service."""
         await self._start_stream()
         return self
 
     async def stop(self):
-        log.info('Real Time Streaming being stopped...')
+        """Stop a stream service."""
+        log.info("Real Time Streaming being stopped...")
         await self._stream.stop()
-        log.info('Real Time Streaming stopped')
+        log.info("Real Time Streaming stopped")
 
     async def _start_stream(self):
         # Configuring realtime connection
-        log.info('Real Time Streaming being configured...')
+        log.info("Real Time Streaming being configured...")
 
         iot_devices: List[StreamDevice] = []
 
@@ -245,51 +296,41 @@ class StreamService:
         self._stream.add_devices(iot_devices)
         self._stream.add_callback(self._on_message_received)
         await self._stream.start()
-        log.info('Real Time Streaming configured')
+        log.info("Real Time Streaming configured")
 
-    def _on_message_received(
-        self,
-        topic,
-        payload: bytes,
-        dup,
-        qos,
-        retain
-    ):
+    def _on_message_received(self, topic, payload: bytes, dup, qos, retain):
         payload_data: Dict[str, Any] = json.loads(payload.decode())
-        message_type = payload_data.get('messageType')
+        message_type = payload_data.get("messageType")
 
-        if message_type == 'notification':
-            operation_type = payload_data['operationType']
-            data_list = payload_data['data']
+        if message_type == "notification":
+            operation_type = payload_data["operationType"]
+            data_list = payload_data["data"]
             if self._on_notification_cb:
                 for data in data_list:
                     asyncio.run(
                         self._on_notification_cb(
-                            operation_type=operation_type,
-                            data=data
+                            operation_type=operation_type, data=data
                         )
                     )
             else:
                 log.info(
                     f"Notification from topic {topic} '{operation_type}': "
-                    f'{data_list}'
+                    f"{data_list}"
                 )
-        elif message_type == 'response':
-            operation_type = payload_data['operationType']
-            success = payload_data['success']
-            data = payload_data['data']
+        elif message_type == "response":
+            operation_type = payload_data["operationType"]
+            success = payload_data["success"]
+            data = payload_data["data"]
             if self._on_response_cb:
                 asyncio.run(
                     self._on_response_cb(
-                        operation_type=operation_type,
-                        success=success,
-                        data=data
+                        operation_type=operation_type, success=success, data=data
                     )
                 )
             else:
                 log.info(
                     f"Response from topic {topic} '{operation_type}'"
-                    f'({success}): {data}'
+                    f"({success}): {data}"
                 )
         else:
-            log.info(f'Unknown message type. Data: {payload_data}')
+            log.info(f"Unknown message type. Data: {payload_data}")
