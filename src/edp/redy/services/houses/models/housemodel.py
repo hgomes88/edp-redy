@@ -1,3 +1,4 @@
+"""House model module."""
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
@@ -8,19 +9,23 @@ from dataclasses_json import Undefined
 
 
 class HouseProfile(Enum):
-    Consumption = 'Consumption'
-    ConsumptionES = 'ConsumptionES'
-    Microgeneration = 'Microgeneration'
-    SelfConsumption = 'Selfconsumption'
-    CommunityConsumption = 'CommunityConsumption'
-    CommunityProduction = 'CommunityProduction'
-    CommunitySelfConsumption = 'CommunitySelfconsumption'
-    Storage = 'Storage'
+    """House profiles."""
+
+    Consumption = "Consumption"
+    ConsumptionES = "ConsumptionES"
+    Microgeneration = "Microgeneration"
+    SelfConsumption = "Selfconsumption"
+    CommunityConsumption = "CommunityConsumption"
+    CommunityProduction = "CommunityProduction"
+    CommunitySelfConsumption = "CommunitySelfconsumption"
+    Storage = "Storage"
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL, undefined=Undefined.EXCLUDE)
 @dataclass
 class House:
+    """House dataclass."""
+
     address: str
     house_id: str
     # permission_role: PermissionRole

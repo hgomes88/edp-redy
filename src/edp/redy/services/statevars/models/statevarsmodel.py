@@ -1,3 +1,4 @@
+"""State variables model module."""
 from dataclasses import dataclass
 from typing import Any
 from typing import Dict
@@ -10,6 +11,8 @@ from dataclasses_json import LetterCase
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class StateVariable:
+    """State Variable class."""
+
     action: Optional[Dict[str, Any]]
     platform_name: str
     realtime: bool
